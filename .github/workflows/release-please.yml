@@ -11,10 +11,15 @@ permissions:
 
 jobs:
   release:
-    # GITHUB_TOKEN only checks out the code: Release Please writes with the
-    # GitHub App token below, which carries its own permissions.
+    # Prefer the GitHub App token, but allow the workflow to run with GITHUB_TOKEN
+    # when the optional App secrets are not configured.
     permissions:
-      contents: read
+      contents: write
+      issues: write
+      pull-requests: write
+    env:
+      SABLIER_GITHUB_APP_ID: ${{ secrets.SABLIER_GITHUB_APP_ID }}
+      SABLIER_GITHUB_APP_PRIVATE_KEY: ${{ secrets.SABLIER_GITHUB_APP_PRIVATE_KEY }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,9 +28,11 @@ jobs:
       - name: Set up GitHub App token
         id: github-app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        if: ${{ env.SABLIER_GITHUB_APP_ID != '' && env.SABLIER_GITHUB_APP_PRIVATE_KEY != '' }}
+        continue-on-error: true
         with:
-          app-id: ${{ secrets.SABLIER_GITHUB_APP_ID }}
-          private-key: ${{ secrets.SABLIER_GITHUB_APP_PRIVATE_KEY }}
+          app-id: ${{ env.SABLIER_GITHUB_APP_ID }}
+          private-key: ${{ env.SABLIER_GITHUB_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-issues: write
           permission-pull-requests: write
@@ -33,6 +40,6 @@ jobs:
       - name: Release Please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ steps.github-app-token.outputs.token }}
+          token: ${{ steps.github-app-token.outputs.token || github.token }}
           config-file: .github/release-please/release-please-config.json
           manifest-file: .github/release-please/.release-please-manifest.json
