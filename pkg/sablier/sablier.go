@@ -16,6 +16,8 @@ import (
 type Sablier struct {
 	provider Provider
 	sessions Store
+	instanceLocks keyedInstanceLocks
+	pauseGrace *pauseGraceManager
 
 	groups *groupRegistry
 
@@ -192,6 +194,11 @@ func (s *Sablier) RemoveInstanceFromAllGroups(instance string) []string {
 }
 
 func (s *Sablier) RemoveInstance(ctx context.Context, name string) error {
+	if s.pauseGrace != nil {
+		unlock := s.instanceLocks.lock(name)
+		defer unlock()
+		s.pauseGrace.cancel(name)
+	}
 	// The instance was stopped from outside Sablier: do not start it again
 	// because of an earlier failed start, and do not let a start in progress
 	// undo the stop.

@@ -2,7 +2,10 @@ package sablier
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+
+	"github.com/sablierapp/sablier/pkg/store"
 
 	"github.com/sablierapp/sablier/pkg/metrics"
 )
@@ -19,12 +22,39 @@ func OnInstanceExpired(ctx context.Context, provider Provider, recorder metrics.
 func (s *Sablier) OnInstanceExpired(ctx context.Context) func(string) {
 	base := onInstanceExpired(ctx, s.provider, s.metrics, s.l, s.verifyEnabledOnExpiration)
 	return func(key string) {
-		s.markStoppedOnPurpose(key)
-		base(key)
-		// The expired session may have been the last one keeping a group active;
-		// restore any instance we forced idle because of an anti-affinity to it.
-		// The store key is already gone by the time this callback runs, so the
-		// reconcile sees the group as inactive.
+		if s.pauseGrace != nil {
+			go func() {
+				unlock := s.instanceLocks.lock(key)
+				defer unlock()
+				if _, err := s.sessions.Get(ctx, key); err == nil {
+					return
+				} else if !errors.Is(err, store.ErrKeyNotFound) {
+					s.l.ErrorContext(ctx, "could not verify expired session before pausing instance", slog.String("instance", key), slog.Any("error", err))
+					return
+				}
+				s.markStoppedOnPurpose(key)
+				if s.verifyEnabledOnExpiration {
+					info, err := s.provider.InstanceInspect(ctx, key)
+					if err != nil {
+						s.l.WarnContext(ctx, "instance expired could not be inspected before pause", slog.String("instance", key), slog.Any("error", err))
+						return
+					}
+					if !info.IsEnabled() {
+						s.l.WarnContext(ctx, "instance expired but is not managed by sablier, skipping pause", slog.String("instance", key))
+						return
+					}
+				}
+				if err := s.provider.InstanceStop(ctx, key); err != nil {
+					s.l.ErrorContext(ctx, "instance expired could not be paused", slog.String("instance", key), slog.Any("error", err))
+					return
+				}
+				s.l.InfoContext(ctx, "instance paused; grace period started", slog.String("instance", key), slog.Duration("grace_period", s.pauseGrace.duration))
+				s.pauseGrace.schedule(key)
+			}()
+		} else {
+			s.markStoppedOnPurpose(key)
+			base(key)
+		}
 		s.triggerAntiAffinityReconcile(ctx)
 	}
 }

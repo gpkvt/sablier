@@ -79,6 +79,14 @@ func Start(ctx context.Context, conf config.Config) error {
 	s.WithMetrics(rec)
 	s.WithRejectUnlabeledRequests(conf.Provider.RejectUnlabeledRequests)
 	s.WithVerifyEnabledOnExpiration(conf.Provider.VerifyEnabledOnExpiration)
+	if conf.Provider.Docker.PauseGracePeriod > 0 {
+		if conf.Provider.Name != "docker" || conf.Provider.Docker.Strategy != "pause" {
+			return fmt.Errorf("provider.docker.pause-grace-period requires the Docker provider and pause strategy")
+		}
+		if err := s.WithPauseGracePeriod(ctx, conf.Provider.Docker.PauseGracePeriod, conf.Storage.File); err != nil {
+			return err
+		}
+	}
 	err = store.OnExpire(ctx, s.OnInstanceExpired(ctx))
 	if err != nil {
 		return err

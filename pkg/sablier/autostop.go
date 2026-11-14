@@ -26,11 +26,14 @@ func (s *Sablier) StopAllUnregisteredInstances(ctx context.Context) error {
 
 	unregistered := make([]string, 0)
 	for _, instance := range instances {
+		if s.pauseGrace != nil && s.pauseGrace.pending(instance.Name) {
+			continue
+		}
 		_, err = s.sessions.Get(ctx, instance.Name)
 		if errors.Is(err, store.ErrKeyNotFound) {
 			unregistered = append(unregistered, instance.Name)
 		}
-	}
+}
 
 	s.l.DebugContext(ctx, "found instances to stop", slog.Any("instances", unregistered))
 
@@ -66,6 +69,9 @@ func (s *Sablier) isStartedByUs(ctx context.Context, name string) bool {
 	_, pending := s.pendingStarts[name]
 	s.pendingMu.Unlock()
 	if pending {
+		return true
+	}
+	if s.pauseGrace != nil && s.pauseGrace.pending(name) {
 		return true
 	}
 	_, err := s.sessions.Get(ctx, name)

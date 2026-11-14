@@ -104,3 +104,18 @@ func (p *Provider) dockerPause(ctx context.Context, name string) error {
 	p.l.DebugContext(ctx, "container paused", slog.String("name", name))
 	return nil
 }
+
+ 
+// InstanceHardStop stops a paused container regardless of the configured idle
+// strategy. It is used only after the optional pause grace period has elapsed.
+// A container that is no longer paused is left alone.
+func (p *Provider) InstanceHardStop(ctx context.Context, name string) error {
+	spec, err := p.Client.ContainerInspect(ctx, name, client.ContainerInspectOptions{})
+	if err != nil {
+		return fmt.Errorf("cannot inspect container before hard stop: %w", err)
+	}
+	if !spec.Container.State.Paused {
+		return nil
+	}
+	return p.dockerStop(ctx, name)
+}

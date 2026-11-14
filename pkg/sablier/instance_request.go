@@ -427,6 +427,11 @@ func (s *Sablier) instanceRequest(ctx context.Context, name string, duration tim
 		return InstanceInfo{}, errors.New("instance name cannot be empty")
 	}
 	name = s.instanceName(ctx, name)
+	if s.pauseGrace != nil {
+		unlock := s.instanceLocks.lock(name)
+		defer unlock()
+		s.pauseGrace.cancel(name)
+	}
 
 	// Anti-affinity: while one of this instance's antagonist groups holds an
 	// active session, it must stay idle. Report it as not-ready with an
