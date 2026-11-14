@@ -97,6 +97,7 @@ Sablier stops opted-in containers when it starts. A container you start afterwar
 | Option | Default | Description |
 |---|---|---|
 | [`--provider.docker.strategy`](/reference/cli/#opt-provider-docker-strategy) | `stop` | `stop` or `pause` idle containers. See [Pause instead of stop](#pause-instead-of-stop). Since v1.11.0. |
+| [`--provider.docker.pause-grace-period`](/reference/cli/#opt-provider-docker-pause-grace-period) | `0` (disabled) | After pausing an idle container, stop it if no request arrives within this duration. Requires `strategy=pause` and `storage.file`; pending deadlines are persisted beside the session state file. |
 | [`--provider.docker.honor-restart-policy`](/reference/cli/#opt-provider-docker-honor-restart-policy) | `false` | Report a one-shot container that exited `0` as completed. See [One-shot containers](#one-shot-containers). Deprecated: the default in v2. Since v1.15.0. |
 
 Every `--provider.*` option that is not provider-specific also applies; see the [CLI reference](/reference/cli/). Sablier connects to the daemon with the [Docker environment variables](#install-sablier). With [tracing](/features/tracing/) on, every Docker API call becomes a span, with no daemon configuration.
@@ -124,6 +125,8 @@ Set `--provider.docker.strategy=pause` to [pause](https://docs.docker.com/refere
 - **Pause** freezes the container's processes and keeps their memory. The next request resumes them instantly.
 
 The strategy applies to every container. A container that is stopped rather than paused is started as usual.
+
+Optionally set `--provider.docker.pause-grace-period=1h` to stop a paused container after one hour without another request. A request during that period cancels the deadline and uses the normal unpause behaviour. If the deadline expires, Sablier stops the container; a later request then uses the normal start path. This requires `--storage.file` so the deadline survives a Sablier restart.
 
 ### Docker Compose
 

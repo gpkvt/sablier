@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 )
@@ -209,6 +210,30 @@ func TestDocker_IsValid(t *testing.T) {
 			name: "valid pause strategy",
 			docker: Docker{
 				Strategy: "pause",
+			},
+			wantErr: nil,
+		},
+		{
+			name: "pause grace period requires pause strategy",
+			docker: Docker{
+				Strategy: "stop",
+				PauseGracePeriod: time.Hour,
+			},
+			wantErr: fmt.Errorf("provider.docker.pause-grace-period requires provider.docker.strategy=pause"),
+		},
+		{
+			name: "negative pause grace period",
+			docker: Docker{
+				Strategy: "pause",
+				PauseGracePeriod: -time.Second,
+			},
+			wantErr: fmt.Errorf("provider.docker.pause-grace-period cannot be negative"),
+		},
+		{
+			name: "valid pause grace period",
+			docker: Docker{
+				Strategy: "pause",
+				PauseGracePeriod: time.Hour,
 			},
 			wantErr: nil,
 		},

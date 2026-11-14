@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"slices"
+	"time"
 )
 
 // Provider holds the provider configurations.
@@ -139,6 +140,14 @@ type Podman struct {
 }
 
 type Docker struct {
+	// PauseGracePeriod stops a paused container after this much idle time.
+	// Requires strategy "pause" and a configured storage file.
+	// Env: SABLIER_PROVIDER_DOCKER_PAUSE_GRACE_PERIOD
+	// CLI: --provider.docker.pause-grace-period
+	// Default: 0 (disabled)
+	// Since: NEXT_RELEASE
+	PauseGracePeriod time.Duration
+
 	// Strategy controls how containers are brought to a stopped state.
 	// "stop" terminates the container process, freeing both CPU and memory.
 	// "pause" suspends execution while keeping the container in memory, allowing faster restarts.
@@ -360,10 +369,16 @@ func (provider Provider) IsValid() error {
 }
 
 func (docker Docker) IsValid() error {
-	if slices.Contains(dockerStrategies, docker.Strategy) {
-		return nil
+	if !slices.Contains(dockerStrategies, docker.Strategy) {
+		return fmt.Errorf("unrecognized docker strategy %s. strategies available: %v", docker.Strategy, dockerStrategies)
 	}
-	return fmt.Errorf("unrecognized docker strategy %s. strategies available: %v", docker.Strategy, dockerStrategies)
+	if docker.PauseGracePeriod < 0 {
+		return fmt.Errorf("provider.docker.pause-grace-period cannot be negative")
+	}
+	if docker.PauseGracePeriod > 0 && docker.Strategy != "pause" {
+		return fmt.Errorf("provider.docker.pause-grace-period requires provider.docker.strategy=pause")
+	}
+	return nil
 }
 
 func (k Kubernetes) IsValid() error {

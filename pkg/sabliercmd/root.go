@@ -66,6 +66,8 @@ It provides integrations with multiple reverse proxies and different loading str
 	_ = viper.BindPFlag("provider.podman.uri", startCmd.Flags().Lookup("provider.podman.uri"))
 	startCmd.Flags().StringVar(&conf.Provider.Docker.Strategy, "provider.docker.strategy", "stop", "Strategy to use to stop docker containers (stop or pause)")
 	_ = viper.BindPFlag("provider.docker.strategy", startCmd.Flags().Lookup("provider.docker.strategy"))
+	startCmd.Flags().DurationVar(&conf.Provider.Docker.PauseGracePeriod, "provider.docker.pause-grace-period", 0, "Stop paused Docker containers after this idle grace period (requires --provider.docker.strategy=pause and --storage.file)")
+	_ = viper.BindPFlag("provider.docker.pause-grace-period", startCmd.Flags().Lookup("provider.docker.pause-grace-period"))
 	//nolint:staticcheck // Intentionally binding the deprecated transitional flag until it becomes the default in v2.
 	startCmd.Flags().BoolVar(&conf.Provider.Docker.HonorRestartPolicy, "provider.docker.honor-restart-policy", false, "Honor the container restart policy on successful exit: report \"no\"/\"on-failure\" containers as completed and exited \"always\"/\"unless-stopped\" containers as stopped. Deprecated: will become the default in v2.")
 	_ = viper.BindPFlag("provider.docker.honor-restart-policy", startCmd.Flags().Lookup("provider.docker.honor-restart-policy"))
