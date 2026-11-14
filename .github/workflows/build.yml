@@ -81,25 +81,25 @@ jobs:
       run: go test -race -covermode=atomic -cover ./... -args -test.gocoverdir=/tmp/gocov
 
     - name: Generate coverage report
-      if: ${{ !cancelled() }}
+      if: ${{ success() && !cancelled() }}
       run: go tool covdata textfmt -i=/tmp/gocov -o=coverage.out
 
     - name: Generate HTML test report
-      if: ${{ !cancelled() }}
+      if: ${{ success() && !cancelled() }}
       run: cat test-report.json | go tool -modfile=tools.mod go-test-report
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
       # Skip the optional scan when the secret is unavailable (e.g. fork PRs
       # or repositories that have not configured SonarQube).
-      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork && env.SONAR_TOKEN != '' }}
+      if: ${{ success() && !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork && env.SONAR_TOKEN != '' }}
       with:
         args: >
           -Dsonar.go.tests.reportPaths=test-report.json
           -Dsonar.go.coverage.reportPaths=coverage.out
 
     - name: Upload HTML Test report
-      if: ${{ !cancelled() }}
+      if: ${{ success() && !cancelled() }}
       id: upload
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
