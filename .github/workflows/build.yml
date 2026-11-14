@@ -21,6 +21,8 @@ jobs:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
 
     - name: Checkout code
@@ -88,11 +90,9 @@ jobs:
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
-      # SONAR_TOKEN is not exposed to fork PRs, so the scan only runs for branches
-      # pushed to this repo (pushes to main and same-repo PRs), never for forks.
-      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork }}
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # Skip the optional scan when the secret is unavailable (e.g. fork PRs
+      # or repositories that have not configured SonarQube).
+      if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && !github.event.pull_request.head.repo.fork && env.SONAR_TOKEN != '' }}
       with:
         args: >
           -Dsonar.go.tests.reportPaths=test-report.json
