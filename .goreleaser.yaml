@@ -45,6 +45,25 @@ archives:
       - sablier.sample.yaml
       - docs/static/theme.schema.json
 
+nfpms:
+  - id: sablier
+    package_name: sablier
+    vendor: Sablier
+    homepage: https://sablierapp.dev
+    maintainer: Sablier contributors
+    description: Start containers on demand and stop them automatically when idle.
+    license: AGPL-3.0
+    formats:
+      - deb
+    bindir: /usr/bin
+    section: utils
+    priority: optional
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/sablier/copyright
+        file_info:
+          mode: 0644
+
 snapshot:
   version_template: SNAPSHOT-{{ .Commit }}
 
@@ -76,7 +95,7 @@ release:
   github:
     owner: sablierapp
     name: sablier
-  
+
 # Change the checksum filename:
 checksum:
   name_template: "checksums.txt"

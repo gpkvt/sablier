@@ -78,6 +78,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Debian packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sablier-deb-packages
+          path: dist/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Publish moving :next image from main
         if: github.ref == 'refs/heads/main'
         # GoReleaser OSS cannot publish from a branch (nightly is Pro-only,
